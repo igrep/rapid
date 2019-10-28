@@ -22,6 +22,7 @@
 -- __Read the "Safety and securty" section before using this module!__
 
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Rapid
     ( -- * Introduction
@@ -68,6 +69,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Word
 import Foreign.Store
+import System.IO (stderr, hPrint)
 
 
 -- | Handle to the current Rapid state.
@@ -82,10 +84,13 @@ data Rapid k =
 
 -- | Cancel the given thread and wait for it to finish.
 
-cancelAndWait :: Async a -> IO ()
+cancelAndWait :: Async () -> IO ()
 cancelAndWait tv = do
     cancel tv
-    () <$ waitCatch tv
+    wait tv `catches`
+        [ Handler $ \(_ :: AsyncCancelled) -> return ()
+        , Handler $ \(e :: SomeException) -> hPrint stderr e
+        ]
 
 
 -- | Get the value of the mutable variable with the given name.  If it
